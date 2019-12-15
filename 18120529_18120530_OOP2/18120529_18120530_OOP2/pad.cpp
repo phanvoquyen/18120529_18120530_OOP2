@@ -61,3 +61,18 @@ void pad::limit()// ham xu li khi pad cham 2 bien
 	else if (x > width - size - 2)
 		x = float(width - size - 2);
 }
+int pad::getsize()
+{
+	return size;
+}
+float pad::getX0() { return xo; }
+float pad::getY0() { return yo; }
+float pad::getX() { return x; }
+float pad::getY() { return y; }
+float pad::getVX() { return vx; }
+void pad::setSize(int x) { size = x; }
+void pad::setX0(float x) { xo = x; }
+void pad::setY0(float x) { yo = x; }
+void pad::setX(float x) { this->x = x; }
+void pad::setY(float x) { y = x; }
+void pad::setVX(float x) { vx = x; }

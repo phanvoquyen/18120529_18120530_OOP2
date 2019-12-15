@@ -18,5 +18,17 @@ public:
 	void runright();// ham di chuyen ve phai pad
 	void limit();// ham xu li khi pad cham 2 bien
 	void reset();// ham reset lai pad khi ghi diem
+	int getsize();
+	float getX0();
+	float getY0();
+	float getX();
+	float getY();
+	float getVX();
+	void setSize(int);
+	void setX0(float);
+	void setY0(float);
+	void setX(float);
+	void setY(float);
+	void setVX(float);
 };
 
