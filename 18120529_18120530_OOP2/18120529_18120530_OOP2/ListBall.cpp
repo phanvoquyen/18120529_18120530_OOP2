@@ -63,12 +63,20 @@ void ListBall::ImpactPACreateFB(pad p1, pad p2, int &p1s, int &p2s) {
 		if (LB[i].ballhitpad1(p1) == 1) {
 			LB[i].setp(1);
 		}//kiểm tra bóng giả đụng thanh người chơi 1, thay đổi hướng bóng
-		if (LB[i].ballhitpad2(p2) == 1) {
+		if (LB[i].ballhitpad2(p2)==1) {
 			LB[i].setp(2);
 		}//kiểm tra bóng giả đụng thanh người chơi 2, thay đổi hướng bóng
 	}
 	int a = LB[0].ballhitpad1(p1);
 	int b = LB[0].ballhitpad2(p2);
+	if (a == 1) {
+		LB[0].setp(1);
+		p1s++;
+	}
+	if (b == 1) {
+		p2s++;
+		LB[0].setp(2);
+	}
 	if (a == 1 || b == 1) {//nếu bóng chín đụng vào một trong 2 thanh chơi
 		if (((p1s - p2s) % 15) == 0 && (p1s != p2s)) {//nếu độ chên lệch điểm là bội số của 5 thì tạo bóng gỉa
 			if (ISExistFakeBall() == 0) {//nếu không tồn tại bóng giả trể sân thì tạo
@@ -81,14 +89,7 @@ void ListBall::ImpactPACreateFB(pad p1, pad p2, int &p1s, int &p2s) {
 
 		}
 	}
-	if (a == 1) {
-		LB[0].setp(1);
-		p1s++;
-	}
-	if (b == 1) {
-		p2s++;
-		LB[0].setp(2);
-	}
+	
 }
 void ListBall::MoveListBall() {
 	for (int i = 0; i < LB.size(); i++) {//duyệt từ đầu đến cuối danh sách bóng

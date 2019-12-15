@@ -2,18 +2,23 @@
 #include <iostream>
 #include<vector>
 #include <ctime>
-#include <fstream>
-#include "ball.h"
+#include <queue>
+#include<fstream>
+#include <string>
 #include "pad.h"
+#include"ListBall.h"
 #include"ListItem.h"
 #include"item.h"
+#include<conio.h>
 using namespace std;
-
+//game chinh
 //thong so man hinh console
 int width = 55;
 int height = 35;
 ofstream savefile;
+//file luu danh sach diem
 
+string FILENAMESCORE = "filenamescore.txt";
 void resetPVP(pad &p1, pad &p2, ball &b, bool &run, int &p1s, int &p2s)									// ham reset khi ball qua vach dich
 {
 	p1.reset();
@@ -87,55 +92,313 @@ void hidecursor() // ham an con tro
 }
 
 //đồ án 2
-//thay đổi tí số, khi có bóng đánh chúng vật phẩm
-void DrawUpScore(int p1s, int p2s) {
-	HANDLE k;
-	k = GetStdHandle(STD_OUTPUT_HANDLE);
-	COORD p;
-
-	// ve bang diem
-	p.X = 0;
-	p.Y = height;
-	SetConsoleCursorPosition(k, p);
-	cout << "\n    Player score: " << "\t\tComputer score: " << '\n';
-	p.X = 19;
-	p.Y = height + 1;
-	SetConsoleCursorPosition(k, p);
-	cout << p1s;
-	p.X = 49;
-	p.Y = height + 1;
-	SetConsoleCursorPosition(k, p);
-	cout << p2s;
+//viết điểm của người chơi vào file điểm
+void WriteScore(string FileName, int p1s, int p2s) {
+	ofstream File;
+	File.open(FileName, ios::app);//mở file để viết tiếp
+	if (File.fail()) {//nếu không tồn tại thì thoát
+		return;
+	}
+	if (p1s > p2s) {//điểm nào lớn hơn sẽ viết vào file
+		File << p1s << endl;
+	}
+	else {
+		File << p2s << endl;;
+	}
+	File.close();
 }
 
-// hàm save game
-void saveGameLogic(string filename, pad &p1, pad &p2, ball &b, bool &run, int &p1s, int &p2s, ListItem litem)
-{
-	filename.insert(0, "..\\");
-	savefile.open(filename.c_str());
+//hamf reset giữ liệu của game trước khi chơi mới
+void ReSet(int &p1s, int &p2s, ListBall &Lb, ListItem &l, pad &p1, pad &p2) {
+	Lb.Reset();//đặt lại bóng chính, và không có bóng giả
+	l.DeleteANewItem();//tạo mới danh sách vật phẩm
+	p1.reset();
+	p2.reset();
+	p1s = 0;
+	p2s = 0;
 
-	// lưu thông số của bóng
-	savefile << b.getBallX() << endl;
-	savefile << b.getBallY() << endl;
-	savefile << b.getBallVX() << endl;
-	savefile << b.getBallVY() << endl;
+}
+
+//hàm xử lí sau khi kết thúc game
+void EndGame(ListBall &Lb, ListItem &l, int &choose, bool &run) {
+	Lb.DrawDeleteFakeBall();//xóa bóng giả còn trên sân
+	l.deleteDraw();//xóa những vật phẩm còn trên sân
+	choose = 0;
+	run = 0;
+
+}
+
+//hàm vẽ bảng thành tích
+void DrawAchBoard(priority_queue<int>Score) {
+	HANDLE h;
+	h = GetStdHandle(STD_OUTPUT_HANDLE);
+	COORD p;
+	p.X = int(width / 2 - 10);
+	p.Y = int(height / 4);
+	SetConsoleCursorPosition(h, p);
+	cout << "achievement boards" << endl;
+	//xuất ra 30 điểm cao nhất
+	int i;
+	for (i = 0; i < 10; i++) {
+		if (!Score.empty()) {
+			if (Score.top() != 0) {
+				p.X = int(width / 2);
+				p.Y = int(height / 4 + i + 1);
+				SetConsoleCursorPosition(h, p);
+				cout << Score.top() << endl;;
+				Score.pop();
+			}
+		}
+	}
+	p.X = int(width / 2 - 20);
+	p.Y = int(height / 4 + i + 1);
+	SetConsoleCursorPosition(h, p);
+	system("pause");
+}
+
+//hàm đọc bangr thành tích thừ file
+void ReadScore(string FileName) {
+	ifstream File;
+	File.open(FileName);//mở file để đọc
+	if (File.fail()) {//không có file thì thoát
+		return;
+	}
+	//danh sách điểm người chơi
+	priority_queue<int>Score;
+	int a;//
+	char temp[255];
+	while (!File.eof()) {//cho chạy từ đầu đến cuối file
+		File >> a;//lấy điếm sô
+		File.getline(temp, 255);
+		Score.push(a);//lưu vào hàng đợi ưu tiên
+	}
+	File.close();//đóng file
+	//xuất ra 30 điểm cao nhất
+	DrawAchBoard(Score);
+}
+
+//hàm xóa bảng thành tích
+void DrawDeleteAchBoard() {
+	HANDLE h;
+	h = GetStdHandle(STD_OUTPUT_HANDLE);
+	COORD p;
+	for (int i = 0; i < height - 10; i++) {
+		p.X = int(width / 2 - 20);
+		p.Y = int(height / 4 + i);
+		SetConsoleCursorPosition(h, p);
+		cout << "                                  " << endl;
+	}
+}
+
+//hàm vẽ lại game và điểm của game
+void DrawTypeASocre(int choose, int p1s, int p2s) {
+	if (choose == 1) {
+		HANDLE h;
+		h = GetStdHandle(STD_OUTPUT_HANDLE);
+		COORD p;
+
+		// ve bang diem
+		p.X = 0;
+		p.Y = height;
+		SetConsoleCursorPosition(h, p);
+		cout << "\n    Player1 score: " << p1s << "   " << "\t\tPlayer2 score: " << p2s << "     \n";
+		return;
+	}
+	if (choose == 2) {
+		HANDLE h;
+		h = GetStdHandle(STD_OUTPUT_HANDLE);
+		COORD p;
+
+		// ve bang diem
+		p.X = 0;
+		p.Y = height;
+		SetConsoleCursorPosition(h, p);
+		cout << "\n    Player score: " << p1s << "   " << "\t\tComputer score: " << p2s << "       \n";
+	}
+}
+
+//hàm lưu game
+void saveGameLogic(string filename, pad p1, pad p2, ListBall lb, bool &run, int p1s, int p2s, ListItem litem, int choose)
+{
+
+	savefile.open(filename); // biến toàn cục
+	if (!savefile) return;
+	// lưu thông số của quả bóng
+	int n = lb.getLBall().size();
+	vector<ball> m = lb.getLBall();
+	savefile << n << endl;
+	for (int i = 0; i < n; i++)
+	{
+		savefile << m[i].getBallX() << " ";
+		savefile << m[i].getBallY() << " ";
+		savefile << m[i].getBallX0() << " ";
+		savefile << m[i].getBallY0() << " ";
+		savefile << m[i].getBallVX() << " ";
+		savefile << m[i].getBallVY() << " ";
+		savefile << m[i].getState() << " ";
+		savefile << m[i].getp() << " ";
+		savefile << endl;
+	}
 
 	// lưu thống số của chương ngại vật và vật phẩm
 	vector<item> list = litem.getLI();
-	int n = litem.getLI().size();
+	n = litem.getLI().size();
+	// lưu số vật phẩm còn lại
+	savefile << n << endl;
 	for (int i = 0; i < n; i++)
 	{
-		savefile << list[i].getShape << endl;
-		savefile << list[i].Get_TrangThai() << endl;
-		savefile << list[i].getScore() << endl;
-		savefile << list[i].getX() << endl;
-		savefile << list[i].getY() << endl;
-		savefile << list[i].getX0() << endl;
-		savefile << list[i].getY0() << endl;
-		savefile << list[i].getVX() << endl;
+		savefile << list[i].getShape() << " ";
+		savefile << list[i].Get_TrangThai() << " ";
+		savefile << list[i].getScore() << " ";
+		savefile << list[i].getX() << " ";
+		savefile << list[i].getY() << " ";
+		savefile << list[i].getX0() << " ";
+		savefile << list[i].getY0() << " ";
+		savefile << list[i].getVX() << " ";
+		savefile << endl;
 	}
 
-	// 
+	// lưu thông số của pad1
+	savefile << p1.getsize() << " ";
+	savefile << p1.getX() << " ";
+	savefile << p1.getY() << " ";
+	savefile << p1.getX0() << " ";
+	savefile << p1.getY0() << " ";
+	savefile << p1.getVX() << " ";
+	savefile << endl;
+	// lưu thông số pad2
+	savefile << p2.getsize() << " ";
+	savefile << p2.getX() << " ";
+	savefile << p2.getY() << " ";
+	savefile << p2.getX0() << " ";
+	savefile << p2.getY0() << " ";
+	savefile << p2.getVX() << " ";
+	savefile << endl;
+	// lưu điểm
+	savefile << p1s << " ";
+	savefile << p2s << " ";
+	savefile << endl;
+	// lưu chế độ chơi 
+	savefile << run << endl;
+	savefile << choose << endl;
+}
+
+//hàm lưu game
+void savegame(pad p1, pad p2, ListBall lb, bool &run, int p1s, int p2s, ListItem litem, int choose)
+{
+
+	system("cls");
+	string filename;
+	FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
+	cout << "Nhap ten file save: ";
+	cin >> filename;
+	saveGameLogic(filename, p1, p2, lb, run, p1s, p2s, litem, choose);
+	system("pause");
+	system("cls");
+	drawborder();
+	litem.Draw();
+	return;
+}
+
+//hàm tải game
+void loadgame(pad &p1, pad &p2, ListBall &lb, bool &run, int &p1s, int &p2s, ListItem &litem, int &choose) {
+	FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
+	system("cls");
+	string filename;
+	cout << "Nhap ten game: ";
+	do {
+		cin >> filename;
+	} while (filename == "");
+
+
+	fstream file(filename, ios::in);
+	if (file.fail()) {
+		return;//khong co game ten do;
+	}
+	int n;
+	//ListBall lb;
+	lb.clear();
+
+	file >> n;
+	float ballX, ballY, ballX0, ballY0;
+	float ballVX, ballVY;
+	int ispad;//biến lưu giá trị do thanh nào đạp lên
+	int state;
+	for (int i = 0; i < n; i++) {
+		ball b;
+		file >> ballX >> ballY >> ballX0 >> ballY0 >> ballVX >> ballVY >> state >> ispad;
+		//chuyen toa do thanh lb
+		b.setBallX(ballX);
+		b.setBallY(ballY);
+		b.setX0(ballX0);
+		b.setY0(ballY0);
+		b.setBallVX(ballVX);
+		b.setBallVY(ballVY);
+		b.setState(state);
+		b.setp(ispad);
+		lb.push_back(b);
+	}
+
+
+	// đọc số vật phẩm còn lại
+	int m;
+	file >> m;
+	int hinh, trangthai, itemVX;
+	float score, itemX, itemY, itemX0, itemY0;
+	litem.CreatEmty();
+	//ListItem litem;
+	for (int i = 0; i < m; i++)
+	{
+		item it;
+		file >> hinh >> trangthai >> score >> itemX >> itemY >> itemX0 >> itemY0 >> itemVX;
+		it.setShape(hinh);
+		it.setState(trangthai);
+		it.setScore(score);
+		it.setX(itemX);
+		it.setY(itemY);
+		it.setX0(itemX0);
+		it.setY0(itemY0);
+		it.setVX(itemVX);
+		litem.push_back(it);
+	}
+
+
+	// đcọ thông số của pad1
+	int psize1;
+	float pad1X, pad1Y, pad1X0, pad1Y0, pad1VX;
+	file >> psize1 >> pad1X >> pad1Y >> pad1X0 >> pad1Y0 >> pad1VX;
+	p1.setSize(psize1);
+	p1.setX(pad1X);
+	p1.setY(pad1Y);
+	p1.setX0(pad1X0);
+	p1.setY0(pad1Y0);
+	p1.setVX(pad1VX);
+
+	// đcọ thông số pad2
+	int psize2;
+	float pad2X, pad2Y, pad2X0, pad2Y0, pad2VX;
+	file >> psize2 >> pad2X >> pad2Y >> pad2X0 >> pad2Y0 >> pad2VX;
+	p2.setSize(psize2);
+	p2.setX(pad2X);
+	p2.setY(pad2Y);
+	p2.setX0(pad2X0);
+	p2.setY0(pad2Y0);
+	p2.setVX(pad2VX);
+
+	// đọc điểm
+	file >> p1s >> p2s;
+
+	// đọc chế độ chơi
+	file >> run >> choose;
+
+	// vẽ lại màn hình chơi
+	system("cls");
+	drawborder();
+	lb.Draw();
+	p1.drawpar();
+	p2.drawpar();
+	litem.Draw();
+
 
 }
 
@@ -163,21 +426,25 @@ int main()
 	//khai bao player1 player2 ball danh sach các vật phẩm.
 	pad p1(width / 2, height - 2, 4, width, height);
 	pad p2(width / 2, 2, 4, width, height);
-	ball b(width / 2 - 1, height / 2, width, height);
+	//khai báo danh sach bóng
+	ListBall Lb;
+	//tạo bóng chính để game chơi
+	Lb.CreatMainBall(width, height);
+	//tạo danh sách vật phẩm
 	ListItem l(width, height);
 
 	//khai bao bien diem cua 2 player
 	int p1s = 0;
 	int p2s = 0;
 
+
 	//ve player1 player2 ball
 	p1.drawpar();
-	//p2.drawpar();
-	b.drawball();
-	//vẽ tỉ số của hai thanh 
-	DrawUpScore(p1s, p2s);
+
+	//ham ve danh sach bong
+	Lb.Draw();
 	//dat van toc cho ball
-	b.startpvp();
+	Lb.Reset();
 	//biên lưu giá trị vật phẩm vừa bắn chúng.
 	double value = 1;
 
@@ -185,6 +452,7 @@ int main()
 	{
 		if (!run && choose == 0)
 		{
+			ReSet(p1s, p2s, Lb, l, p1, p2);//hàm reset lại game trước khi chơi
 			COORD p;
 
 			//ve intro
@@ -197,14 +465,25 @@ int main()
 			p.X = int(width / 2 - 15);
 			p.Y = int(height / 1.5f - 1);
 			SetConsoleCursorPosition(h, p);
-			cout << "PLAYER VS PLAYER:	PRESS 1";
+			cout << "PLAYER VS PLAYER:	PRESS 1         ";
 
 			//ve lua chon player vs computer
 			p.X = int(width / 2 - 15);
 			p.Y = int(height / 1.5f + 1);
 			SetConsoleCursorPosition(h, p);
-			cout << "PLAYER VS COMPUTER: PRESS 2";
+			cout << "PLAYER VS COMPUTER: PRESS 2           ";
 
+			//ve lua cho mo bang thanh tich
+			p.X = int(width / 2 - 15);
+			p.Y = int(height / 1.5f + 3);
+			SetConsoleCursorPosition(h, p);
+			cout << "ACHIEVEMENT BOARDS:PRESS 3          ";
+
+			// ve lua chon load game
+			p.X = int(width / 2 - 15);
+			p.Y = int(height / 1.5f + 5);
+			SetConsoleCursorPosition(h, p);
+			cout << "LOAD GAME:PRESS 4          ";
 			if (GetAsyncKeyState(VK_NUMPAD1))//getAsyncKeyState là hàm bắt fhim, VK_NUMPAP1 là bắt phim số 1, VK_NUMPAP0-VKNUMPAP9 tuong duong tu 1-9
 			{
 				COORD p;
@@ -227,8 +506,16 @@ int main()
 				SetConsoleCursorPosition(h, p);
 				cout << "                                  ";
 
-				// dat van toc cho ball pvp
-				b.startpvp();
+				//xóa intro mà bảng thành tích
+				p.X = int(width / 2 - 20);
+				p.Y = int(height / 1.5f + 3);
+				SetConsoleCursorPosition(h, p);
+				cout << "                                  ";
+				// xóa load game
+				p.X = int(width / 2 - 20);
+				p.Y = int(height / 1.5f + 5);
+				SetConsoleCursorPosition(h, p);
+				cout << "                                  ";
 
 				//cho game bat dau chay player vs player
 				choose = 1;
@@ -257,12 +544,32 @@ int main()
 				SetConsoleCursorPosition(h, p);
 				cout << "                                  ";
 
-				// dat van toc cho ball pve
-				b.startpve();
+				//xóa intro mà bảng thành tích
+				p.X = int(width / 2 - 20);
+				p.Y = int(height / 1.5f + 3);
+				SetConsoleCursorPosition(h, p);
+				cout << "                                  ";
+				// xóa load game
+				p.X = int(width / 2 - 20);
+				p.Y = int(height / 1.5f + 5);
+				SetConsoleCursorPosition(h, p);
+				cout << "                                  ";
 
 				//cho game bat dau chay player vs computer
 				choose = 2;
 			}
+
+			if (GetAsyncKeyState(VK_NUMPAD3)) {
+				DrawDeleteAchBoard();
+				ReadScore(FILENAMESCORE);
+				DrawDeleteAchBoard();
+			}
+			if (GetAsyncKeyState(VK_NUMPAD4))
+			{
+				loadgame(p1, p2, Lb, run, p1s, p2s, l, choose);
+
+			}
+
 		}
 
 		// hien intro player vs player
@@ -289,6 +596,8 @@ int main()
 			SetConsoleCursorPosition(h, p);
 			cout << "PLAYER 2	TOP		left: 4	 right: 6 ";
 
+			// ve bang diem
+			DrawTypeASocre(choose, p1s, p2s);
 			if (GetAsyncKeyState(VK_SPACE))										//khi nguoi dung nhan spacebar
 			{
 				COORD p;
@@ -321,6 +630,7 @@ int main()
 		// hien intro player vs computer
 		if (!run && choose == 2)
 		{
+
 			//hien chu man hinh cho
 			COORD p;
 
@@ -342,6 +652,8 @@ int main()
 			SetConsoleCursorPosition(h, p);
 			cout << "COMPUTER  TOP";
 
+			// ve bang diem
+			DrawTypeASocre(choose, p1s, p2s);
 			if (GetAsyncKeyState(VK_SPACE))										//khi nguoi dung nhan spacebar
 			{
 				COORD p;
@@ -374,21 +686,22 @@ int main()
 		//player chơi với player
 		if (run && choose == 1)
 		{
-			//kiểm tra ball có va chạm với vật phẩm không
-			value = b.IsImpactItem(l);
-			//nếu giá trị vật phẩm trả về bằng 1 tức là không có vật phẩm được đánh chúng
-			if (value != 1) {
-				//hàm thay đổi điểm của người chơi
-				b.UpScore(value, p1s, p2s);
-				//hàm vẽ lại điểm người chơi
-				DrawUpScore(p1s, p2s);
-				//hàm vẽ lại vật phẩm
+			//hàm kiểm tra bóng đụng vật phẩm, thay điểm người chơi
+			Lb.UpDrawScore(p1s, p2s, l);
+
+			//hàm vẽ điểm của người chơi
+			DrawTypeASocre(choose, p1s, p2s);
+
+			//hàm xóa những bóng giả bị đụng biên trên và dưới
+			Lb.DrawDeleteFakeBall();
+
+			//hàm xu li khi bong dung thanh, va tao bong gia
+			Lb.ImpactPACreateFB(p1, p2, p1s, p2s);
+
+
+			if (GetAsyncKeyState(0x53) & 0x8000) {
+				savegame(p1, p2, Lb, run, p1s, p2s, l, choose);
 			}
-
-			//kiem tra ball dung pad
-			b.ballhitpad1(p1);
-			b.ballhitpad2(p2);
-
 			//player 1 di chuyen
 			if (GetAsyncKeyState(VK_LEFT))										// nhan mui ten trai
 				p1.runleft();													//pad player 1 di chuyen sang trai
@@ -405,13 +718,8 @@ int main()
 			p1.limit();
 			p2.limit();
 
-			//ball di chuyen
-			b.ballmove();
-
-
-			//kiem tra ball ra 2 bien
-			b.balllimit();
-
+			//hàm di chuyển bóng
+			Lb.MoveListBall();
 
 			// thiếu hàm tăng tốc độ ở đây
 		}
@@ -419,47 +727,50 @@ int main()
 		//chơi với computer
 		if (run && choose == 2)
 		{
+			//hàm kiểm tra bóng đụng vật phẩm, thay điểm người chơi
+			Lb.UpDrawScore(p1s, p2s, l);
 
+			//hàm vẽ điểm của người chơi
+			DrawTypeASocre(choose, p1s, p2s);
 
-			//kiểm tra ball có va chạm với vật phẩm không
-			value = b.IsImpactItem(l);
-			//kiểm tra giá trị của vật phẩm, nếu bằng 1 là không có vật phẩm bị đánh chúng
-			if (value != 1) {//nếu khác 1 có vật phẩm bị đánh chúng
-				b.UpScore(value, p1s, p2s);// thay đổi điểm của người chơi phụ thược vào giá trị của vật phẩm bị đánh chúng
-				DrawUpScore(p1s, p2s);//vẽ lại điểm của người chơi
+			//hàm xóa những bóng giả bị đụng biên trên và dưới
+			Lb.DrawDeleteFakeBall();
+
+			//hàm xu li khi bong dung thanh, va tao bong gia
+			Lb.ImpactPACreateFB(p1, p2, p1s, p2s);
+
+			if (GetAsyncKeyState(0x53) & 0x8000) {
+				savegame(p1, p2, Lb, run, p1s, p2s, l, choose);
 			}
-			//kiem tra ball dung pad
-			b.ballhitpad1(p1);
-			b.ballhitpad2(p2);
-			//player di chuyen
 			if (GetAsyncKeyState(VK_LEFT))										// nhan mui ten trai
 				p1.runleft();													//pad player di chuyen sang trai
 			else if (GetAsyncKeyState(VK_RIGHT))								// nhan mui ten sang phai
 				p1.runright();													//pad player di chuyen sang phai
-			//computer di chuyen
-			b.padcompmove(p2);//xem lại hàm này
+
+			 //computer di chuyen
+			Lb.Get_Ball(0).padcompmove(p2);//xem lại hàm này
+
 			//kiem tra pad toi duong bien
 			p1.limit();
 			p2.limit();
-			//ball di chuyen
-			b.ballmove();
-			//kiem tra ball ra 2 bien
-			b.balllimit();
+
+			//hàm di chuyển bóng
+			Lb.MoveListBall();
 		}
 		//nếu điểm hai người chơi chênh lệch bội số 10 thì cho vật phẩm di chuyển, và một trong hai điểm số phải khác 0
-		if (((p1s - p2s) % 10) == 0 && (p1s != 0 || p2s != 0)) {
+		if (((p1s - p2s) % 10) == 0 && (p1s !=p2s)) {
 			l.MoveListItem();//di chuyển danh sách vật phẩm
 
 		}
+
 		//ve player1 player2 ball
-		b.drawball();
+		Lb.Draw();
 		p1.drawpar();
 		p2.drawpar();
 
-
-		if ((l.IsState() && p1s > p2s) || b.ballscore() == 2)
+		if ((l.IsState() && p1s > p2s) || Lb.Get_Ball(0).ballscore() == 2)
 		{
-			l.deleteDraw();//xóa các vật phẩm để màn hình nhìn đẹp
+
 			if (choose == 1)
 			{
 				COORD p;
@@ -473,7 +784,7 @@ int main()
 				p.Y = int(height / 1.5f - 1);
 				SetConsoleCursorPosition(h, p);
 
-				break;
+				system("pause");
 			}
 			else if (choose == 2)
 			{
@@ -488,12 +799,15 @@ int main()
 				p.Y = int(height / 1.5f - 1);
 				SetConsoleCursorPosition(h, p);
 
-				break;
+				system("pause");
 			}
+			EndGame(Lb, l, choose, run);//hàm xử lí kết thúc game
+			WriteScore(FILENAMESCORE, p1s, p2s);//ghi điểm vào danh sách điểm
 		}
-		else if ((l.IsState() && p1s < p2s) || b.ballscore() == 1)
+		else if ((l.IsState() && p1s < p2s) || Lb.Get_Ball(0).ballscore() == 1)
 		{
-			l.deleteDraw();//xóa các vật phẩm để màn hình nhìn đẹp
+
+
 			if (choose == 1)
 			{
 				COORD p;
@@ -507,7 +821,7 @@ int main()
 				p.Y = int(height / 1.5f - 1);
 				SetConsoleCursorPosition(h, p);
 
-				break;
+				system("pause");
 			}
 			else if (choose == 2)
 			{
@@ -522,11 +836,14 @@ int main()
 				p.Y = int(height / 1.5f - 1);
 				SetConsoleCursorPosition(h, p);
 
-				break;
+				system("pause");
 			}
+			EndGame(Lb, l, choose, run);//hàm xử lí kết thúc game
+			WriteScore(FILENAMESCORE, p1s, p2s);//ghi điểm vào danh sách điểm
 		}
 		else if (l.IsState()) {//khi hết vật phẩm thì game kết thúc, mà điểm số hai người chơi bằng nhau màn hình sẽ hiện qual score
-			l.deleteDraw();//xóa các vật phẩm để màn hình nhìn đẹp
+			EndGame(Lb, l, choose, run);//hàm xử lí kết thúc game
+			WriteScore(FILENAMESCORE, p1s, p2s);//ghi điểm vào danh sách điểm
 			COORD p;
 
 			p.X = int(width / 2 - 10);
@@ -537,8 +854,8 @@ int main()
 			p.X = int(width / 2 - 13);
 			p.Y = int(height / 1.5f - 1);
 			SetConsoleCursorPosition(h, p);
+			system("pause");
 
-			break;
 		}
 
 
